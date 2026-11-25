@@ -2,6 +2,26 @@ import * as THREE from "three";
 import { DRACOLoader, GLTF, GLTFLoader } from "three-stdlib";
 import { setCharTimeline, setAllTimeline } from "../../utils/GsapScroll";
 
+const LFS_REMOTE_MODEL_BASE =
+  "https://media.githubusercontent.com/media/harshmaha070-ui/Portfolio-2/main/public/models";
+
+async function loadGlbWithLfsFallback(
+  loader: GLTFLoader,
+  localPath: string,
+  fileName: string
+): Promise<GLTF> {
+  try {
+    return await loader.loadAsync(localPath);
+  } catch (localErr) {
+    const remoteUrl = `${LFS_REMOTE_MODEL_BASE}/${encodeURIComponent(fileName)}`;
+    console.warn(
+      `Failed to load local ${localPath}, falling back to ${remoteUrl}:`,
+      localErr
+    );
+    return await loader.loadAsync(remoteUrl);
+  }
+}
+
 const setCharacter = (
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
@@ -13,18 +33,33 @@ const setCharacter = (
   loader.setDRACOLoader(dracoLoader);
 
   const loadCharacter = () => {
-    return new Promise<GLTF | null>(async (resolve, reject) => {
+    return new Promise<GLTF | null>(async (resolve) => {
       try {
         // 1. Load Desk Environment (table, monitor, computer, keyboard, animations)
         let deskGltf: GLTF | null = null;
         try {
-          deskGltf = await loader.loadAsync("/models/desk.glb");
+          deskGltf = await loadGlbWithLfsFallback(
+            loader,
+            "/models/desk.glb",
+            "desk.glb"
+          );
         } catch (e) {
           console.warn("Desk model not found, proceeding with character only.", e);
         }
 
         // 2. Load Custom Character model
-        const customCharGltf = await loader.loadAsync("/models/character.glb");
+        let customCharGltf: GLTF | null = null;
+        try {
+          customCharGltf = await loadGlbWithLfsFallback(
+            loader,
+            "/models/character.glb",
+            "character.glb"
+          );
+        } catch (e) {
+          console.error("Failed to load character model:", e);
+          resolve(null);
+          return;
+        }
         const customChar = customCharGltf.scene;
 
         customChar.traverse((child: any) => {
@@ -213,7 +248,11 @@ const setCharacter = (
             groundObj.material = mat;
           }
 
-          await renderer.compileAsync(deskScene, camera, scene);
+          try {
+            await renderer.compileAsync(deskScene, camera, scene);
+          } catch (compileErr) {
+            console.warn("Shader compileAsync warning:", compileErr);
+          }
 
           // Add ONLY the custom character inside the scene
           deskScene.add(headPivot);
@@ -223,7 +262,11 @@ const setCharacter = (
         } else {
           const charGroup = new THREE.Group();
           charGroup.add(headPivot);
-          await renderer.compileAsync(charGroup, camera, scene);
+          try {
+            await renderer.compileAsync(charGroup, camera, scene);
+          } catch (compileErr) {
+            console.warn("Shader compileAsync warning:", compileErr);
+          }
           rootObject = charGroup;
           returnGltf = {
             ...customCharGltf,
@@ -237,8 +280,9 @@ const setCharacter = (
 
         dracoLoader.dispose();
       } catch (err) {
-        reject(err);
         console.error(err);
+        dracoLoader.dispose();
+        resolve(null);
       }
     });
   };
