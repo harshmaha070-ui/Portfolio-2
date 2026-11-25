@@ -1,7 +1,9 @@
-import { SplitText } from "gsap-trial/SplitText";
+import { SplitText } from "gsap/SplitText";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { smoother } from "../Navbar";
+
+gsap.registerPlugin(SplitText, ScrollTrigger);
 
 export function initialFX() {
   document.body.style.overflowY = "auto";
