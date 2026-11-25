@@ -61,7 +61,10 @@ const Scene = () => {
           let character = gltf.scene;
           setChar(character);
           scene.add(character);
-          headBone = character.getObjectByName("spine006") || null;
+          headBone =
+            character.getObjectByName("headPivot") ||
+            character.getObjectByName("spine006") ||
+            null;
           screenLight = character.getObjectByName("screenlight") || null;
           progress.loaded().then(() => {
             setTimeout(() => {
@@ -115,9 +118,12 @@ const Scene = () => {
             mouse.y,
             interpolation.x,
             interpolation.y,
-            THREE.MathUtils.lerp
+            THREE.MathUtils.lerp,
+            clock.getElapsedTime()
           );
-          light.setPointLight(screenLight);
+          if (screenLight) {
+            light.setPointLight(screenLight);
+          }
         }
         const delta = clock.getDelta();
         if (mixer) {

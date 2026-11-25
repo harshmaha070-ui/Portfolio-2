@@ -1,7 +1,10 @@
 .contact-section {
+  position: relative;
+  z-index: 10;
+  background-color: var(--backgroundColor);
   margin: auto;
   padding-bottom: 100px;
-  margin-top: 100px;
+  padding-top: 100px;
 }
 .contact-section h3 {
   font-size: 60px;
@@ -29,6 +32,11 @@
 a.contact-social {
   font-size: 25px;
   border-bottom: 1px solid #ccc;
+  transition: color 0.3s, border-color 0.3s;
+}
+a.contact-social:hover {
+  color: var(--accentColor);
+  border-bottom-color: var(--accentColor);
 }
 .contact-box h2 {
   font-weight: 400;

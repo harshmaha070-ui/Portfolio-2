@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FaInstagram } from "react-icons/fa6";
 import { MdArrowOutward } from "react-icons/md";
 
 interface Props {
@@ -11,6 +12,8 @@ interface Props {
 const WorkImage = (props: Props) => {
   const [isVideo, setIsVideo] = useState(false);
   const [video, setVideo] = useState("");
+  const isInstagram = props.link?.includes("instagram.com");
+
   const handleMouseEnter = async () => {
     if (props.video) {
       setIsVideo(true);
@@ -29,10 +32,14 @@ const WorkImage = (props: Props) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setIsVideo(false)}
         target="_blank"
+        rel="noopener noreferrer"
+        aria-label={props.alt ? `View ${props.alt}` : "View Project"}
         data-cursor={"disable"}
       >
         {props.link && (
           <div className="work-link">
+            {isInstagram && <FaInstagram className="work-link-ig" />}
+            <span>View Project</span>
             <MdArrowOutward />
           </div>
         )}

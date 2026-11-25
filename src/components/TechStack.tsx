@@ -1,211 +1,415 @@
 import * as THREE from "three";
 import { useRef, useMemo, useState, useEffect } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment } from "@react-three/drei";
-import { EffectComposer, N8AO } from "@react-three/postprocessing";
-import {
-  BallCollider,
-  Physics,
-  RigidBody,
-  CylinderCollider,
-  RapierRigidBody,
-} from "@react-three/rapier";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Environment, Html, RoundedBox } from "@react-three/drei";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 
-const textureLoader = new THREE.TextureLoader();
-const imageUrls = [
-  "/images/react2.webp",
-  "/images/next2.webp",
-  "/images/node2.webp",
-  "/images/express.webp",
-  "/images/mongo.webp",
-  "/images/mysql.webp",
-  "/images/typescript.webp",
-  "/images/javascript.webp",
+gsap.registerPlugin(useGSAP, ScrollTrigger);
+
+interface SoftwareTool {
+  id: string;
+  name: string;
+  image: string;
+  desktopPos: [number, number, number];
+  mobilePos: [number, number, number];
+  floatSpeed: number;
+  floatPhase: number;
+}
+
+const softwareTools: SoftwareTool[] = [
+  {
+    id: "premiere",
+    name: "Adobe Premiere Pro",
+    image: "/assets/premiere-pro.png",
+    desktopPos: [-4.05, 0.55, 0.4],
+    mobilePos: [-1.45, 1.35, 0.3],
+    floatSpeed: 1.35,
+    floatPhase: 0,
+  },
+  {
+    id: "after-effects",
+    name: "Adobe After Effects",
+    image: "/assets/after-effects.png",
+    desktopPos: [-1.35, -0.65, 0.9],
+    mobilePos: [1.45, 1.15, 0.7],
+    floatSpeed: 1.55,
+    floatPhase: 1.6,
+  },
+  {
+    id: "photoshop",
+    name: "Adobe Photoshop",
+    image: "/assets/photoshop.png",
+    desktopPos: [1.35, 0.6, 0.7],
+    mobilePos: [-1.45, -1.25, 0.6],
+    floatSpeed: 1.4,
+    floatPhase: 3.1,
+  },
+  {
+    id: "illustrator",
+    name: "Adobe Illustrator",
+    image: "/assets/illustrator.png",
+    desktopPos: [4.05, -0.55, 0.3],
+    mobilePos: [1.45, -1.4, 0.25],
+    floatSpeed: 1.5,
+    floatPhase: 4.7,
+  },
 ];
-const textures = imageUrls.map((url) => textureLoader.load(url));
 
-const sphereGeometry = new THREE.SphereGeometry(1, 28, 28);
+function createRedGlowTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const grad = ctx.createRadialGradient(128, 128, 12, 128, 128, 128);
+    grad.addColorStop(0, "rgba(255, 23, 68, 0.92)");
+    grad.addColorStop(0.35, "rgba(229, 9, 53, 0.55)");
+    grad.addColorStop(0.7, "rgba(139, 0, 31, 0.18)");
+    grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 256);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  return tex;
+}
 
-const spheres = [...Array(30)].map(() => ({
-  scale: [0.7, 1, 0.8, 1, 1][Math.floor(Math.random() * 5)],
-}));
+interface FloatingIconProps {
+  tool: SoftwareTool;
+  texture: THREE.Texture;
+  glowTexture: THREE.Texture;
+  isHovered: boolean;
+  onHoverChange: (id: string | null) => void;
+}
 
-type SphereProps = {
-  vec?: THREE.Vector3;
-  scale: number;
-  r?: typeof THREE.MathUtils.randFloatSpread;
-  material: THREE.MeshPhysicalMaterial;
-  isActive: boolean;
-};
+function FloatingIcon({
+  tool,
+  texture,
+  glowTexture,
+  isHovered,
+  onHoverChange,
+}: FloatingIconProps) {
+  const groupRef = useRef<THREE.Group>(null);
+  const glowMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const frameMatRef = useRef<THREE.MeshStandardMaterial>(null);
+  const { viewport } = useThree();
 
-function SphereGeo({
-  vec = new THREE.Vector3(),
-  scale,
-  r = THREE.MathUtils.randFloatSpread,
-  material,
-  isActive,
-}: SphereProps) {
-  const api = useRef<RapierRigidBody | null>(null);
+  const isCompact = viewport.width < 6.5;
+  const targetBasePos: [number, number, number] = isCompact
+    ? [
+        (tool.mobilePos[0] > 0 ? 1 : -1) * Math.min(viewport.width * 0.24, 1.35),
+        tool.mobilePos[1] * 0.92 - 0.15,
+        tool.mobilePos[2],
+      ]
+    : [
+        tool.desktopPos[0] * Math.min(1, viewport.width / 11.0),
+        tool.desktopPos[1],
+        tool.desktopPos[2],
+      ];
+  const baseScale = isCompact
+    ? Math.min(0.68, Math.max(0.48, viewport.width / 6.3))
+    : Math.min(1.0, Math.max(0.76, viewport.width / 11.0));
 
-  useFrame((_state, delta) => {
-    if (!isActive) return;
-    delta = Math.min(0.1, delta);
-    const impulse = vec
-      .copy(api.current!.translation())
-      .normalize()
-      .multiply(
-        new THREE.Vector3(
-          -50 * delta * scale,
-          -150 * delta * scale,
-          -50 * delta * scale
-        )
+  useFrame((state, delta) => {
+    if (!groupRef.current) return;
+    const t = state.clock.getElapsedTime();
+    const dt = Math.min(0.05, delta);
+
+    const floatY = Math.sin(t * tool.floatSpeed + tool.floatPhase) * 0.2;
+    const floatX = Math.cos(t * tool.floatSpeed * 0.7 + tool.floatPhase) * 0.08;
+
+    const desiredX = targetBasePos[0] + floatX;
+    const desiredY = targetBasePos[1] + floatY;
+    const desiredZ = targetBasePos[2] + (isHovered ? 0.55 : 0);
+
+    groupRef.current.position.x = THREE.MathUtils.lerp(
+      groupRef.current.position.x,
+      desiredX,
+      dt * 6
+    );
+    groupRef.current.position.y = THREE.MathUtils.lerp(
+      groupRef.current.position.y,
+      desiredY,
+      dt * 6
+    );
+    groupRef.current.position.z = THREE.MathUtils.lerp(
+      groupRef.current.position.z,
+      desiredZ,
+      dt * 7
+    );
+
+    const targetScale = baseScale * (isHovered ? 1.15 : 1.0);
+    const nextScale = THREE.MathUtils.lerp(
+      groupRef.current.scale.x,
+      targetScale,
+      dt * 8
+    );
+    groupRef.current.scale.setScalar(nextScale);
+
+    const idleRotY = Math.sin(t * 0.8 + tool.floatPhase) * 0.22;
+    const idleRotX = Math.cos(t * 0.65 + tool.floatPhase) * 0.1;
+    const desiredRotY = isHovered ? 0 : idleRotY;
+    const desiredRotX = isHovered ? 0 : idleRotX;
+
+    groupRef.current.rotation.y = THREE.MathUtils.lerp(
+      groupRef.current.rotation.y,
+      desiredRotY,
+      dt * 6
+    );
+    groupRef.current.rotation.x = THREE.MathUtils.lerp(
+      groupRef.current.rotation.x,
+      desiredRotX,
+      dt * 6
+    );
+
+    if (glowMatRef.current) {
+      glowMatRef.current.opacity = THREE.MathUtils.lerp(
+        glowMatRef.current.opacity,
+        isHovered ? 0.85 : 0.32,
+        dt * 7
       );
+    }
 
-    api.current?.applyImpulse(impulse, true);
+    if (frameMatRef.current) {
+      frameMatRef.current.emissiveIntensity = THREE.MathUtils.lerp(
+        frameMatRef.current.emissiveIntensity,
+        isHovered ? 0.55 : 0.12,
+        dt * 7
+      );
+    }
   });
 
   return (
-    <RigidBody
-      linearDamping={0.75}
-      angularDamping={0.15}
-      friction={0.2}
-      position={[r(20), r(20) - 25, r(20) - 10]}
-      ref={api}
-      colliders={false}
+    <group
+      ref={groupRef}
+      position={targetBasePos}
+      scale={baseScale}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        document.body.style.cursor = "pointer";
+        onHoverChange(tool.id);
+      }}
+      onPointerOut={(e) => {
+        e.stopPropagation();
+        document.body.style.cursor = "auto";
+        onHoverChange(null);
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onHoverChange(isHovered ? null : tool.id);
+      }}
     >
-      <BallCollider args={[scale]} />
-      <CylinderCollider
-        rotation={[Math.PI / 2, 0, 0]}
-        position={[0, 0, 1.2 * scale]}
-        args={[0.15 * scale, 0.275 * scale]}
-      />
-      <mesh
+      {/* Subtle red ambient glow halo behind each 3D icon */}
+      <mesh position={[0, 0, -0.22]}>
+        <planeGeometry args={[3.5, 3.5]} />
+        <meshBasicMaterial
+          ref={glowMatRef}
+          map={glowTexture}
+          transparent
+          opacity={0.32}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* 3D Beveled obsidian plaque for realistic depth & lighting */}
+      <RoundedBox
+        args={[1.92, 1.92, 0.22]}
+        radius={0.35}
+        smoothness={6}
         castShadow
         receiveShadow
-        scale={scale}
-        geometry={sphereGeometry}
-        material={material}
-        rotation={[0.3, 1, 1]}
-      />
-    </RigidBody>
+      >
+        <meshStandardMaterial
+          ref={frameMatRef}
+          color="#13080d"
+          metalness={0.65}
+          roughness={0.25}
+          emissive="#E50935"
+          emissiveIntensity={0.12}
+        />
+      </RoundedBox>
+
+      {/* Front icon face preserving exact artwork, aspect ratio, and transparency */}
+      <mesh position={[0, 0, 0.118]}>
+        <planeGeometry args={[2.38, 2.38]} />
+        <meshStandardMaterial
+          map={texture}
+          transparent
+          alphaTest={0.05}
+          roughness={0.25}
+          metalness={0.08}
+        />
+      </mesh>
+
+      {/* Back icon face for clean 3D rotation */}
+      <mesh position={[0, 0, -0.118]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[2.38, 2.38]} />
+        <meshStandardMaterial
+          map={texture}
+          transparent
+          alphaTest={0.05}
+          roughness={0.25}
+          metalness={0.08}
+        />
+      </mesh>
+
+      {isHovered && (
+        <Html position={[0, -1.48, 0.25]} center distanceFactor={11}>
+          <div className="tech-icon-tooltip">{tool.name}</div>
+        </Html>
+      )}
+    </group>
   );
 }
 
-type PointerProps = {
-  vec?: THREE.Vector3;
-  isActive: boolean;
-};
+function FloatingCluster({
+  textures,
+  glowTexture,
+  hoveredId,
+  onHoverChange,
+}: {
+  textures: THREE.Texture[];
+  glowTexture: THREE.Texture;
+  hoveredId: string | null;
+  onHoverChange: (id: string | null) => void;
+}) {
+  const clusterRef = useRef<THREE.Group>(null);
 
-function Pointer({ vec = new THREE.Vector3(), isActive }: PointerProps) {
-  const ref = useRef<RapierRigidBody>(null);
-
-  useFrame(({ pointer, viewport }) => {
-    if (!isActive) return;
-    const targetVec = vec.lerp(
-      new THREE.Vector3(
-        (pointer.x * viewport.width) / 2,
-        (pointer.y * viewport.height) / 2,
-        0
-      ),
-      0.2
+  useFrame(({ pointer }, delta) => {
+    if (!clusterRef.current) return;
+    const dt = Math.min(0.05, delta);
+    const targetRotY = pointer.x * 0.14;
+    const targetRotX = -pointer.y * 0.08;
+    clusterRef.current.rotation.y = THREE.MathUtils.lerp(
+      clusterRef.current.rotation.y,
+      targetRotY,
+      dt * 4
     );
-    ref.current?.setNextKinematicTranslation(targetVec);
+    clusterRef.current.rotation.x = THREE.MathUtils.lerp(
+      clusterRef.current.rotation.x,
+      targetRotX,
+      dt * 4
+    );
   });
 
   return (
-    <RigidBody
-      position={[100, 100, 100]}
-      type="kinematicPosition"
-      colliders={false}
-      ref={ref}
-    >
-      <BallCollider args={[2]} />
-    </RigidBody>
+    <group ref={clusterRef} position={[0, -0.35, 0]}>
+      {softwareTools.map((tool, index) => (
+        <FloatingIcon
+          key={tool.id}
+          tool={tool}
+          texture={textures[index]}
+          glowTexture={glowTexture}
+          isHovered={hoveredId === tool.id}
+          onHoverChange={onHoverChange}
+        />
+      ))}
+
+      {/* Soft grounded red floor glow & shadow catch under cluster */}
+      <mesh position={[0, -2.55, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[12, 5.5]} />
+        <meshBasicMaterial
+          map={glowTexture}
+          transparent
+          opacity={0.26}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+    </group>
   );
 }
 
 const TechStack = () => {
-  const [isActive, setIsActive] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  const textures = useMemo(() => {
+    const loader = new THREE.TextureLoader();
+    return softwareTools.map((tool) => {
+      const tex = loader.load(tool.image);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      return tex;
+    });
+  }, []);
+
+  const glowTexture = useMemo(() => createRedGlowTexture(), []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY || document.documentElement.scrollTop;
-      const threshold = document
-        .getElementById("work")!
-        .getBoundingClientRect().top;
-      setIsActive(scrollY > threshold);
-    };
-    document.querySelectorAll(".header a").forEach((elem) => {
-      const element = elem as HTMLAnchorElement;
-      element.addEventListener("click", () => {
-        const interval = setInterval(() => {
-          handleScroll();
-        }, 10);
-        setTimeout(() => {
-          clearInterval(interval);
-        }, 1000);
-      });
-    });
-    window.addEventListener("scroll", handleScroll);
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      document.body.style.cursor = "auto";
     };
   }, []);
-  const materials = useMemo(() => {
-    return textures.map(
-      (texture) =>
-        new THREE.MeshPhysicalMaterial({
-          map: texture,
-          emissive: "#ffffff",
-          emissiveMap: texture,
-          emissiveIntensity: 0.3,
-          metalness: 0.5,
-          roughness: 1,
-          clearcoat: 0.1,
-        })
+
+  useGSAP(() => {
+    const techTimeline = gsap.timeline({
+      scrollTrigger: {
+        trigger: ".techstack",
+        start: "top 85%",
+        end: "top 25%",
+        scrub: 1,
+        id: "techstack-trigger",
+      },
+    });
+
+    techTimeline.fromTo(
+      ".techstack h2",
+      { opacity: 0, y: 50, scale: 0.95 },
+      { opacity: 1, y: 0, scale: 1, ease: "power2.out" }
     );
+
+    techTimeline.fromTo(
+      ".tech-canvas",
+      { opacity: 0 },
+      { opacity: 1, ease: "power2.out" },
+      0.2
+    );
+
+    return () => {
+      techTimeline.kill();
+      ScrollTrigger.getById("techstack-trigger")?.kill();
+    };
   }, []);
 
   return (
     <div className="techstack">
-      <h2> My Techstack</h2>
+      <h2>Skills &amp; Tools</h2>
 
       <Canvas
         shadows
-        gl={{ alpha: true, stencil: false, depth: false, antialias: false }}
-        camera={{ position: [0, 0, 20], fov: 32.5, near: 1, far: 100 }}
-        onCreated={(state) => (state.gl.toneMappingExposure = 1.5)}
+        dpr={[1, 2]}
+        gl={{ alpha: true, antialias: true }}
+        camera={{ position: [0, 0, 12], fov: 38, near: 0.5, far: 100 }}
+        onCreated={(state) => (state.gl.toneMappingExposure = 1.15)}
         className="tech-canvas"
       >
-        <ambientLight intensity={1} />
-        <spotLight
-          position={[20, 20, 25]}
-          penumbra={1}
-          angle={0.2}
-          color="white"
+        <ambientLight intensity={0.75} />
+        <directionalLight
+          position={[4, 7, 8]}
+          intensity={1.7}
+          color="#ffffff"
           castShadow
           shadow-mapSize={[512, 512]}
         />
-        <directionalLight position={[0, 5, -4]} intensity={2} />
-        <Physics gravity={[0, 0, 0]}>
-          <Pointer isActive={isActive} />
-          {spheres.map((props, i) => (
-            <SphereGeo
-              key={i}
-              {...props}
-              material={materials[Math.floor(Math.random() * materials.length)]}
-              isActive={isActive}
-            />
-          ))}
-        </Physics>
+        <pointLight position={[-6, 1, 5]} intensity={14} color="#E50935" distance={22} />
+        <pointLight position={[6, -1, 4]} intensity={12} color="#FF1744" distance={22} />
+        <pointLight position={[0, 4, -5]} intensity={10} color="#8B001F" distance={20} />
+
+        <FloatingCluster
+          textures={textures}
+          glowTexture={glowTexture}
+          hoveredId={hoveredId}
+          onHoverChange={setHoveredId}
+        />
+
         <Environment
           files="/models/char_enviorment.hdr"
-          environmentIntensity={0.5}
+          environmentIntensity={0.45}
           environmentRotation={[0, 4, 2]}
         />
-        <EffectComposer enableNormalPass={false}>
-          <N8AO color="#0f002c" aoRadius={2} intensity={1.15} />
-        </EffectComposer>
       </Canvas>
     </div>
   );

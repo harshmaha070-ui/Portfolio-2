@@ -6,9 +6,11 @@ const About = () => {
       <div className="about-me">
         <h3 className="title">About Me</h3>
         <p className="para">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Hic quis
-          dolores numquam iusto Ratione earum ducimus autem id iure pariatur
-          dolorum quae maiores.
+          I’m a passionate freelance video editor who turns raw footage into
+          engaging and professional videos. I specialize in editing YouTube
+          videos, Shorts, and Instagram Reels that capture attention and keep
+          viewers watching. My goal is to help creators and brands grow with
+          high-quality video content.
         </p>
       </div>
     </div>

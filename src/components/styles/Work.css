@@ -7,10 +7,12 @@
   color: var(--accentColor);
 }
 .work-section {
-  transition: 0s;
+  position: relative;
+  z-index: 10;
+  background-color: var(--backgroundColor);
   height: 100vh;
   box-sizing: border-box;
-  will-change: transform;
+  overflow: hidden;
 }
 .work-container {
   margin: auto;
@@ -92,29 +94,53 @@
 }
 .work-image-in {
   position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+  cursor: pointer;
 }
 .work-link {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background-color: var(--backgroundColor);
-  width: 50px;
-  border-radius: 50px;
-  height: 50px;
-  display: flex;
+  bottom: 12px;
+  right: 12px;
+  z-index: 2;
+  background-color: rgba(11, 8, 12, 0.88);
+  backdrop-filter: blur(6px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  display: inline-flex;
   justify-content: center;
   align-items: center;
-  font-size: 25px;
-  box-shadow: 0px 0px 10px 0px rgba(255, 255, 255, 0.5),
-    inset 0px 0px 10px 0px #393939;
-  transition: 0.3s;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.3s ease, transform 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease, box-shadow 0.3s ease;
+  transform: translateY(4px);
   opacity: 0;
+}
+.work-link-ig {
+  font-size: 15px;
+  color: var(--accentColor);
 }
 .work-image a:hover {
   color: inherit;
+  border-color: rgba(229, 9, 53, 0.7);
+  box-shadow: 0px 8px 28px rgba(229, 9, 53, 0.25);
 }
 .work-image a:hover .work-link {
   opacity: 1;
+  transform: translateY(0);
+  color: #ffffff;
+  border-color: var(--accentColor);
+  box-shadow: 0px 0px 18px rgba(229, 9, 53, 0.55);
 }
 .work-image video {
   position: absolute;
@@ -126,12 +152,20 @@
   object-fit: cover;
 }
 .work-image img {
-  max-width: 100%;
-  max-height: 350px;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  max-height: 270px;
+  object-fit: cover;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.work-image a:hover img {
+  transform: scale(1.045);
 }
 @media only screen and (max-height: 900px) {
   .work-image img {
-    max-height: 250px;
+    max-height: 230px;
   }
   .work-box {
     padding-top: 40px;
@@ -165,9 +199,9 @@
     font-size: 50px;
   }
 }
-@media only screen and (max-width: 1400px) {
+@media only screen and (max-width: 1024px) {
   .work-box {
-    width: 350px;
+    width: 360px;
     padding: 30px;
   }
   .work-flex {
@@ -178,7 +212,7 @@
 
 @media only screen and (max-height: 650px) {
   .work-image img {
-    max-height: 200px;
+    max-height: 190px;
   }
   .work-section h2 {
     font-size: 40px;
@@ -188,23 +222,47 @@
     gap: 20px;
   }
 }
-/* @media only screen and (max-width: 900px) {
+
+@media only screen and (max-width: 767px) {
   .work-image img {
-    max-height: 200px;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    max-height: none !important;
+    object-fit: cover;
+  }
+  .work-section {
+    height: auto !important;
+    overflow: visible !important;
+    padding-bottom: 60px;
   }
   .work-section h2 {
-    font-size: 40px;
+    font-size: 36px;
+    margin-top: 40px;
     margin-bottom: 20px;
   }
-  .work-box {
-    gap: 20px;
-  }
-} */
-@media only screen and (max-width: 1025px) {
   .work-container {
+    height: auto !important;
     align-content: normal;
   }
   .work-flex {
-    height: auto;
+    flex-direction: column !important;
+    height: auto !important;
+    margin-left: 0 !important;
+    padding-right: 0 !important;
+    gap: 30px;
+  }
+  .work-flex::before,
+  .work-flex::after {
+    display: none;
+  }
+  .work-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #363636;
+    padding: 30px 30px 30px 15px !important;
+  }
+  .work-flex .work-box:nth-child(even) {
+    flex-direction: column !important;
   }
 }

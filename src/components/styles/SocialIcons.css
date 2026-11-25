@@ -22,7 +22,7 @@
   color: var(--backgroundColor);
 }
 .social-icons a:hover {
-  color: var(--backgroundColor);
+  color: var(--accentColor);
   /* transform: scale(1.2); */
 }
 .social-icons span {

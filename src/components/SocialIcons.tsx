@@ -1,13 +1,13 @@
 import {
-  FaGithub,
+  FaEnvelope,
   FaInstagram,
-  FaLinkedinIn,
-  FaXTwitter,
+  FaPhone,
 } from "react-icons/fa6";
 import "./styles/SocialIcons.css";
 import { TbNotes } from "react-icons/tb";
 import { useEffect } from "react";
 import HoverLinks from "./HoverLinks";
+import { smoother } from "./Navbar";
 
 const SocialIcons = () => {
   useEffect(() => {
@@ -60,28 +60,37 @@ const SocialIcons = () => {
     <div className="icons-section">
       <div className="social-icons" data-cursor="icons" id="social">
         <span>
-          <a href="https://github.com" target="_blank">
-            <FaGithub />
-          </a>
-        </span>
-        <span>
-          <a href="https://www.linkedin.com" target="_blank">
-            <FaLinkedinIn />
-          </a>
-        </span>
-        <span>
-          <a href="https://x.com" target="_blank">
-            <FaXTwitter />
-          </a>
-        </span>
-        <span>
-          <a href="https://www.instagram.com" target="_blank">
+          <a
+            href="https://www.instagram.com/typebyharsh?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram"
+          >
             <FaInstagram />
           </a>
         </span>
+        <span>
+          <a href="mailto:harshmaha070@gmail.com" aria-label="Email">
+            <FaEnvelope />
+          </a>
+        </span>
+        <span>
+          <a href="tel:+917383445704" aria-label="Phone">
+            <FaPhone />
+          </a>
+        </span>
       </div>
-      <a className="resume-button" href="#">
-        <HoverLinks text="RESUME" />
+      <a
+        className="resume-button"
+        href="#contact"
+        onClick={(e) => {
+          if (window.innerWidth >= 900 && smoother) {
+            e.preventDefault();
+            smoother.scrollTo("#contact", true, "top top");
+          }
+        }}
+      >
+        <HoverLinks text="CONTACT" />
         <span>
           <TbNotes />
         </span>
