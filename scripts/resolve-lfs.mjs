@@ -3,7 +3,7 @@ import path from "node:path";
 
 const LFS_HEADER = "version https://git-lfs.github.com/spec/v1";
 const REPO_RAW_BASE =
-  "https://media.githubusercontent.com/media/harshmaha070-ui/Portfolio-2/main/public/models";
+  "https://media.githubusercontent.com/media/harshmaha070-ui/portfolio-2/main/public/models";
 const TARGET_DIR = path.resolve("dist/models");
 
 function isGlbBinary(buf) {

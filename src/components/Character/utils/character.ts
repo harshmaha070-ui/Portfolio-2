@@ -3,7 +3,7 @@ import { DRACOLoader, GLTF, GLTFLoader } from "three-stdlib";
 import { setCharTimeline, setAllTimeline } from "../../utils/GsapScroll";
 
 const LFS_REMOTE_MODEL_BASE =
-  "https://media.githubusercontent.com/media/harshmaha070-ui/Portfolio-2/main/public/models";
+  "https://media.githubusercontent.com/media/harshmaha070-ui/portfolio-2/main/public/models";
 
 async function loadGlbWithLfsFallback(
   loader: GLTFLoader,
