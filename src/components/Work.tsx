@@ -22,7 +22,7 @@ const projects: ProjectItem[] = [
     title: "Trending Reel Editing",
     category: "Instagram Reels • Trending Edit",
     tools: "Trend Editing, Pacing, Typography",
-    image: "/images/project-01-trending-reel.png",
+    image: "/images/project-01-trending-reel.webp",
     link: "https://www.instagram.com/p/Db2sOjKBqp_/",
   },
   {
@@ -30,7 +30,7 @@ const projects: ProjectItem[] = [
     title: "Instagram Talking Reel Editing",
     category: "Talking Head Reels",
     tools: "Clean Cuts, Captions, Retention Hooks",
-    image: "/images/project-02-talking-reel.png",
+    image: "/images/project-02-talking-reel.webp",
     link: "https://www.instagram.com/p/DdWX0ZftAUN/",
   },
   {
@@ -38,7 +38,7 @@ const projects: ProjectItem[] = [
     title: "Festival & Event Editing",
     category: "Event & Highlight Reels",
     tools: "Color Grading, Sound Design, Beat Sync",
-    image: "/images/project-03-festival-event.png",
+    image: "/images/project-03-festival-event.webp",
     link: "https://www.instagram.com/p/Dc1MG_7MFVI/",
   },
   {
@@ -46,7 +46,7 @@ const projects: ProjectItem[] = [
     title: "Movie Character Introduction Edit",
     category: "Cinematic & VFX Edit",
     tools: "Speed Ramps, Transitions, Sound FX",
-    image: "/images/project-04-movie-intro.png",
+    image: "/images/project-04-movie-intro.webp",
     link: "https://www.instagram.com/p/DX6HCE5xlox/",
   },
   {
@@ -54,7 +54,7 @@ const projects: ProjectItem[] = [
     title: "Motion Graphics & Typography Editing",
     category: "Motion Graphics & Kinetic Type",
     tools: "Kinetic Typography, Motion Design, Visual Flow",
-    image: "/images/project-05-motion-typography.png",
+    image: "/images/project-05-motion-typography.webp",
     link: "https://www.instagram.com/p/De0mHD6Bv71/",
   },
   {
@@ -62,7 +62,7 @@ const projects: ProjectItem[] = [
     title: "Car Delivery Edits",
     category: "Automotive & Commercial Reels",
     tools: "Dynamic Cuts, Sound FX, Color Grading",
-    image: "/images/project-06-car-delivery.png",
+    image: "/images/project-06-car-delivery.webp",
     link: "https://www.instagram.com/p/Dcm3lwhtEX7/",
   },
   {
@@ -70,7 +70,7 @@ const projects: ProjectItem[] = [
     title: "Podcast Teaser Editing",
     category: "YouTube Shorts • Podcast Teaser",
     tools: "Podcast Teaser Edit — \"Kyun Fail Hote Hain Students?\"",
-    image: "/images/canva-podcast-teaser.png",
+    image: "/images/canva-podcast-teaser.webp",
     link: "https://youtube.com/shorts/MOUv0s4DdFo?si=zo8K9UaKRjUPDAqb",
   },
   {
@@ -142,41 +142,39 @@ const Work = () => {
       const mm = gsap.matchMedia();
 
       mm.add("(min-width: 768px)", () => {
-        // Dynamically calculate horizontal travel needed to bring the last card to the center
+        // Layout-only measurement so GSAP transform: translate3d does not affect scroll math
         const getScrollAmount = () => {
           const lastBox = boxes[boxes.length - 1];
-          let offsetLeft = 0;
-          for (let i = 0; i < boxes.length - 1; i++) {
-            offsetLeft += boxes[i].offsetWidth;
-          }
-          const centerOffset = Math.max(0, (window.innerWidth - lastBox.offsetWidth) / 2);
-          return Math.max(0, offsetLeft - centerOffset);
+          const targetCenterX = workSection.clientWidth / 2;
+          const lastCardCenterInSection =
+            workFlex.offsetLeft + lastBox.offsetLeft + lastBox.offsetWidth / 2;
+          return Math.max(0, lastCardCenterInSection - targetCenterX);
         };
-
-        const scrollDistance = () => getScrollAmount();
 
         const timeline = gsap.timeline({
           scrollTrigger: {
             trigger: workSection,
             start: "top top",
-            end: () => `+=${scrollDistance() + window.innerHeight * 0.8}`,
-            scrub: 1,
+            end: () => `+=${Math.round(getScrollAmount() * 1.15)}`,
+            scrub: true,
             pin: true,
             pinSpacing: true,
             anticipatePin: 1,
+            fastScrollEnd: true,
+            preventOverlaps: true,
             invalidateOnRefresh: true,
             id: "work",
           },
         });
 
         timeline.to(workFlex, {
-          x: () => -scrollDistance(),
+          x: () => -getScrollAmount(),
           ease: "none",
           duration: 1,
         });
 
-        // Dwell period on last card centered before unpinning
-        timeline.to({}, { duration: 0.35 });
+        // Brief dwell on last card centered before unpinning
+        timeline.to({}, { duration: 0.15 });
 
         return () => {
           timeline.kill();
@@ -184,12 +182,7 @@ const Work = () => {
         };
       });
 
-      const refreshTimer = setTimeout(() => {
-        ScrollTrigger.refresh();
-      }, 300);
-
       return () => {
-        clearTimeout(refreshTimer);
         mm.revert();
         ScrollTrigger.getById("work")?.kill(true);
       };

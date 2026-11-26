@@ -38,23 +38,27 @@ const Scene = () => {
         animations?: ReturnType<typeof setAnimations>
       ) => {
         if (!isMounted) return;
+        const lightDelay = window.innerWidth < 768 ? 250 : 1000;
         progress.loaded().then(() => {
           if (!isMounted) return;
           setTimeout(() => {
             if (!isMounted) return;
             light.turnOnLights();
             animations?.startIntro();
-          }, 2500);
+          }, lightDelay);
         });
       };
 
       try {
         renderer = new THREE.WebGLRenderer({
           alpha: true,
-          antialias: true,
+          antialias: window.innerWidth >= 768,
+          powerPreference: "high-performance",
         });
         renderer.setSize(container.width, container.height);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(
+          Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2)
+        );
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1;
         canvasDiv.current.appendChild(renderer.domElement);
@@ -143,6 +147,13 @@ const Scene = () => {
       }
       const animate = () => {
         animFrameId = requestAnimationFrame(animate);
+        // Pause expensive 3D rendering when scrolled past the character sections (e.g., My Work / TechStack)
+        if (canvasDiv.current) {
+          const r = canvasDiv.current.getBoundingClientRect();
+          if (r.bottom <= 0 || r.top >= window.innerHeight) {
+            return;
+          }
+        }
         if (headBone) {
           handleHeadRotation(
             headBone,

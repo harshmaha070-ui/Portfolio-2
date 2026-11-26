@@ -323,23 +323,97 @@ function FloatingCluster({
   );
 }
 
-const TechStack = () => {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
+function TechStackCanvas({
+  hoveredId,
+  onHoverChange,
+  isInView,
+}: {
+  hoveredId: string | null;
+  onHoverChange: (id: string | null) => void;
+  isInView: boolean;
+}) {
   const textures = useMemo(() => {
     const loader = new THREE.TextureLoader();
     return softwareTools.map((tool) => {
       const tex = loader.load(tool.image);
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = 8;
+      tex.anisotropy = 4;
       return tex;
     });
   }, []);
 
   const glowTexture = useMemo(() => createRedGlowTexture(), []);
 
+  return (
+    <Canvas
+      shadows="percentage"
+      dpr={[1, 1.75]}
+      frameloop={isInView ? "always" : "never"}
+      gl={{ alpha: true, antialias: true }}
+      camera={{ position: [0, 0, 12], fov: 38, near: 0.5, far: 100 }}
+      onCreated={(state) => (state.gl.toneMappingExposure = 1.15)}
+      className="tech-canvas"
+    >
+      <ambientLight intensity={0.75} />
+      <directionalLight
+        position={[4, 7, 8]}
+        intensity={1.7}
+        color="#ffffff"
+        castShadow
+        shadow-mapSize={[512, 512]}
+      />
+      <pointLight position={[-6, 1, 5]} intensity={14} color="#E50935" distance={22} />
+      <pointLight position={[6, -1, 4]} intensity={12} color="#FF1744" distance={22} />
+      <pointLight position={[0, 4, -5]} intensity={10} color="#8B001F" distance={20} />
+
+      <FloatingCluster
+        textures={textures}
+        glowTexture={glowTexture}
+        hoveredId={hoveredId}
+        onHoverChange={onHoverChange}
+      />
+
+      <Environment
+        files="/models/char_enviorment.hdr"
+        environmentIntensity={0.45}
+        environmentRotation={[0, 4, 2]}
+      />
+    </Canvas>
+  );
+}
+
+const TechStack = () => {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [shouldMountCanvas, setShouldMountCanvas] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+
   useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+
+    const preloadObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setShouldMountCanvas(true);
+          preloadObserver.disconnect();
+        }
+      },
+      { rootMargin: "900px 0px" }
+    );
+    preloadObserver.observe(el);
+
+    const viewObserver = new IntersectionObserver(
+      (entries) => {
+        setIsInView(Boolean(entries[0]?.isIntersecting));
+      },
+      { rootMargin: "250px 0px" }
+    );
+    viewObserver.observe(el);
+
     return () => {
+      preloadObserver.disconnect();
+      viewObserver.disconnect();
       document.body.style.cursor = "auto";
     };
   }, []);
@@ -350,7 +424,7 @@ const TechStack = () => {
         trigger: ".techstack",
         start: "top 85%",
         end: "top 25%",
-        scrub: 1,
+        scrub: true,
         id: "techstack-trigger",
       },
     });
@@ -372,45 +446,19 @@ const TechStack = () => {
       techTimeline.kill();
       ScrollTrigger.getById("techstack-trigger")?.kill();
     };
-  }, []);
+  }, [shouldMountCanvas]);
 
   return (
-    <div className="techstack">
+    <div className="techstack" ref={sectionRef}>
       <h2>Skills &amp; Tools</h2>
 
-      <Canvas
-        shadows
-        dpr={[1, 2]}
-        gl={{ alpha: true, antialias: true }}
-        camera={{ position: [0, 0, 12], fov: 38, near: 0.5, far: 100 }}
-        onCreated={(state) => (state.gl.toneMappingExposure = 1.15)}
-        className="tech-canvas"
-      >
-        <ambientLight intensity={0.75} />
-        <directionalLight
-          position={[4, 7, 8]}
-          intensity={1.7}
-          color="#ffffff"
-          castShadow
-          shadow-mapSize={[512, 512]}
-        />
-        <pointLight position={[-6, 1, 5]} intensity={14} color="#E50935" distance={22} />
-        <pointLight position={[6, -1, 4]} intensity={12} color="#FF1744" distance={22} />
-        <pointLight position={[0, 4, -5]} intensity={10} color="#8B001F" distance={20} />
-
-        <FloatingCluster
-          textures={textures}
-          glowTexture={glowTexture}
+      {shouldMountCanvas && (
+        <TechStackCanvas
           hoveredId={hoveredId}
           onHoverChange={setHoveredId}
+          isInView={isInView}
         />
-
-        <Environment
-          files="/models/char_enviorment.hdr"
-          environmentIntensity={0.45}
-          environmentRotation={[0, 4, 2]}
-        />
-      </Canvas>
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { PropsWithChildren, useEffect, useState } from "react";
+import { lazy, PropsWithChildren, Suspense, useEffect, useState } from "react";
 import About from "./About";
 import Career from "./Career";
 import Contact from "./Contact";
@@ -10,8 +10,9 @@ import WhatIDo from "./WhatIDo";
 import Work from "./Work";
 import setSplitText from "./utils/splitText";
 
-import TechStack from "./TechStack";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+const TechStack = lazy(() => import("./TechStack"));
 
 const MainContainer = ({ children }: PropsWithChildren) => {
   const [isDesktopView, setIsDesktopView] = useState<boolean>(
@@ -19,20 +20,30 @@ const MainContainer = ({ children }: PropsWithChildren) => {
   );
 
   useEffect(() => {
+    let lastWidth = window.innerWidth;
+    let resizeTimer: number | undefined;
+
+    setSplitText();
+
     const resizeHandler = () => {
-      setSplitText();
-      setIsDesktopView(window.innerWidth >= 900);
+      const nextWidth = window.innerWidth;
+      if (nextWidth === lastWidth) return;
+      lastWidth = nextWidth;
+
+      clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        setSplitText();
+        setIsDesktopView(nextWidth >= 900);
+        ScrollTrigger.refresh();
+      }, 200);
     };
-    resizeHandler();
+
     window.addEventListener("resize", resizeHandler);
-    const refreshTimer = setTimeout(() => {
-      ScrollTrigger.refresh();
-    }, 500);
     return () => {
-      clearTimeout(refreshTimer);
+      clearTimeout(resizeTimer);
       window.removeEventListener("resize", resizeHandler);
     };
-  }, [isDesktopView]);
+  }, []);
 
   return (
     <div className="container-main">
@@ -48,7 +59,9 @@ const MainContainer = ({ children }: PropsWithChildren) => {
             <WhatIDo />
             <Career />
             <Work />
-            <TechStack />
+            <Suspense fallback={<div className="techstack" />}>
+              <TechStack />
+            </Suspense>
             <Contact />
           </div>
         </div>
